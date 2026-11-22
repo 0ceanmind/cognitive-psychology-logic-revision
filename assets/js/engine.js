@@ -310,6 +310,7 @@
     document.getElementById('hud-theme').onclick = toggleTheme;
     const start = parseInt((location.hash || '').replace('#', ''), 10);
     const shot = /[?&]shot/.test(location.search); // static capture mode (testing)
+    if (/[?&]light/.test(location.search)) document.documentElement.dataset.theme = 'light';
     if (shot) {
       const s = document.createElement('style');
       s.textContent = '*,*::before,*::after{transition-duration:0s!important;transition-delay:0s!important;animation-duration:0s!important;animation-delay:0s!important}#hud,#progress{display:none!important}';

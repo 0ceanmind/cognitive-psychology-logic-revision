@@ -52,7 +52,7 @@
   const norm = s => ' ' + String(s).toLowerCase().replace(/[^a-z0-9±\s-]/g, ' ').replace(/\s+/g, ' ') + ' ';
   function markDef(item, text) {
     const t = norm(text);
-    const hits = item.q.keywords.map(g => g.some(w => t.includes(String(w).toLowerCase())));
+    const hits = item.q.keywords.map(g => g.some(w => t.includes(norm(w).trim())));
     const r = hits.filter(Boolean).length / (hits.length || 1);
     const suggest = !text.trim() ? 0 : r >= 0.75 ? 2 : r >= 0.4 ? 1 : 0;
     return { hits, suggest };
