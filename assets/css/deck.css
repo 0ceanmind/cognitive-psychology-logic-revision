@@ -342,3 +342,21 @@ body.idle .hud-bar { opacity: 0; transform: translateX(-50%) translateY(16px); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- Answer highlight (from mock exam) ---------- */
+.answer-hl {
+  outline: 4px solid var(--yellow) !important; outline-offset: 6px; border-radius: 14px;
+  background-color: color-mix(in srgb, var(--yellow) 16%, transparent) !important;
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--yellow) 10%, transparent), 0 0 80px -10px var(--yellow) !important;
+  animation: answerPulse 1.8s ease-in-out infinite !important; opacity: 1 !important; transform: none !important;
+}
+tr.answer-hl td { background: color-mix(in srgb, var(--yellow) 16%, transparent) !important; color: var(--text) !important; opacity: 1 !important; }
+@keyframes answerPulse { 0%, 100% { outline-color: var(--yellow); } 50% { outline-color: color-mix(in srgb, var(--yellow) 35%, transparent); } }
+.answer-tag {
+  position: absolute; right: 120px; top: 44px; z-index: 5; display: flex; gap: 12px; align-items: center;
+  font-size: 24px; font-weight: 600; color: var(--text); padding: 10px 20px 10px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent); border: 1.5px solid var(--yellow);
+  animation: rise .7s var(--ease) both;
+}
+.answer-tag span { background: var(--yellow); color: #000; font-weight: 800; padding: 6px 16px; border-radius: 999px; letter-spacing: .04em; }
+body.embed #hud, body.embed #progress { display: none !important; }

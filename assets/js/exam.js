@@ -15,6 +15,42 @@
 
   let state = { ch: 'all', items: [], i: 0 };
 
+  /* ---------- "where is the answer?" — preview + open in deck ---------- */
+  function answerText(it) {
+    if (it.type === 'def') return it.q.model;
+    const ex = String(it.q.explain || '').replace(/\([^)]*\)\s*\.?$/, '');
+    return it.options[it.answer] + ' ' + ex;
+  }
+  function deckURL(it, embed) {
+    const p = new URLSearchParams({ fc: it.q.ch, a: answerText(it), q: it.q.q, src: it.q.src || '' });
+    if (embed) p.set('embed', '1');
+    return 'index.html?' + p.toString();
+  }
+  const peekBtn = k => `<button class="x-btn x-peek" data-peek="${k}">See it in the slides</button>`;
+  function openPeek(k) {
+    const it = state.items[k]; if (!it) return;
+    closePeek();
+    const m = document.createElement('div');
+    m.className = 'x-modal'; m.id = 'peek';
+    m.innerHTML = `<div class="x-mcard" role="dialog" aria-label="Where the answer is">
+      <div class="x-mhead"><div><div class="x-eyebrow">Where the answer is · Chapter ${it.q.ch}</div><div class="x-mtitle" id="peekTitle">Finding the slide…</div></div>
+        <button class="x-ghost" id="peekClose" aria-label="Close">Close ✕</button></div>
+      <div class="x-frame"><div class="x-load">Opening the presentation…</div><iframe title="Slide preview" src="${esc(deckURL(it, true))}"></iframe></div>
+      <div class="x-mfoot"><div class="x-ans"><span>Answer</span>${esc(it.type === 'mcq' ? it.options[it.answer] : it.q.model)}</div>
+        <a class="x-btn primary" href="${esc(deckURL(it, false))}" target="_blank" rel="noopener">Open full presentation ↗</a></div></div>`;
+    document.body.appendChild(m);
+    requestAnimationFrame(() => m.classList.add('open'));
+    m.addEventListener('click', e => { if (e.target === m) closePeek(); });
+    m.querySelector('#peekClose').onclick = closePeek;
+    m.querySelector('iframe').addEventListener('load', () => { const l = m.querySelector('.x-load'); if (l) l.style.opacity = 0; });
+  }
+  function closePeek() { const m = document.getElementById('peek'); if (m) m.remove(); }
+  window.addEventListener('message', e => {
+    const d = e.data; if (!d || d.type !== 'cpl-found') return;
+    const t = document.getElementById('peekTitle'); if (t) t.textContent = d.chapter + ' · Slide ' + d.index + ' · ' + d.title;
+  });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-peek]'); if (b) openPeek(+b.dataset.peek); });
+
   document.getElementById('themeBtn').onclick = () => {
     const r = document.documentElement; const t = r.dataset.theme === 'light' ? 'dark' : 'light';
     r.dataset.theme = t; try { localStorage.setItem('cpl-theme', t); } catch (e) { }
@@ -132,7 +168,7 @@
       app.querySelector('#opts').classList.add('locked');
       const fb = app.querySelector('#fb');
       fb.className = 'x-feedback show ' + (ok ? 'good' : 'bad');
-      fb.innerHTML = `<h4>${ok ? 'Correct' : 'Not quite — the answer is ' + 'ABCD'[it.answer]}</h4><p>${esc(it.q.explain || '')}</p><div class="src">Source: ${esc(it.q.src || 'Chapter ' + it.q.ch)}</div>`;
+      fb.innerHTML = `<h4>${ok ? 'Correct' : 'Not quite — the answer is ' + 'ABCD'[it.answer]}</h4><p>${esc(it.q.explain || '')}</p><div class="src">Source: ${esc(it.q.src || 'Chapter ' + it.q.ch)}</div>${ok ? '' : '<div class="x-row" style="margin-top:1em">' + peekBtn(state.i) + '</div>'}`;
       app.querySelector('#next').disabled = false;
       app.querySelector('.x-dots').outerHTML = dots();
     };
@@ -171,6 +207,7 @@
           <div class="x-mark"><span class="lbl">Suggested mark ${it.suggest}/2 — your mark:</span>
             <div class="x-seg" id="mk">${[0, 1, 2].map(v => `<button data-v="${v}" class="${it.score === v ? 'on' : ''}">${v} / 2</button>`).join('')}</div></div>
           <div class="src">Source: ${esc(it.q.src || 'Chapter ' + it.q.ch)}</div>
+          ${it.score < 2 ? '<div class="x-row" style="margin-top:1em">' + peekBtn(state.i) + '</div>' : ''}
         </div>`;
       app.querySelectorAll('#mk button').forEach(bt => bt.onclick = () => { it.score = +bt.dataset.v; showOut(); app.querySelector('.x-dots').outerHTML = dots(); });
     };
@@ -226,7 +263,8 @@
         const a = x.type === 'mcq'
           ? `Your answer: <b>${x.picked == null ? '—' : esc(x.options[x.picked])}</b> · Correct: <b>${esc(x.options[x.answer])}</b><br>${esc(x.q.explain || '')}`
           : `Your answer: <b>${x.text ? esc(x.text) : '—'}</b> (${x.score || 0}/2)<br>Model: ${esc(x.q.model)}`;
-        return `<div class="it ${cls}"><div class="q">Ch ${x.q.ch} · ${esc(x.q.q)}</div><div class="a">${a}</div></div>`;
+        const k = state.items.indexOf(x);
+        return `<div class="it ${cls}"><div class="q">Ch ${x.q.ch} · ${esc(x.q.q)}</div><div class="a">${a}</div>${cls !== 'ok' ? '<div style="margin-top:.6em">' + peekBtn(k).replace('x-btn x-peek', 'x-btn x-peek sm') + '</div>' : ''}</div>`;
       }).join('') || '<p class="x-lead">No mistakes. Well done.</p>';
     };
     rev(false);
@@ -244,6 +282,7 @@
   }
 
   document.addEventListener('keydown', e => {
+    if (document.getElementById('peek')) { if (e.key === 'Escape') closePeek(); return; }
     if (!state.items.length || !app.querySelector('.x-opt, .x-ta')) {
       if (e.key === 'Enter' && document.getElementById('start')) start();
       return;

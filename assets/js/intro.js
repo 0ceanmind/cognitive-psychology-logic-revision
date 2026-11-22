@@ -55,7 +55,8 @@
               <span class="pill" style="--accent:var(--green)">Ch 3 · Cognitive Psychology</span>
               <span class="pill" style="--accent:var(--orange)">Ch 4 · Memory</span>
             </div>
-            <p class="small faint rise d4" style="margin-top:60px">Interactive revision · press <b class="accent">→</b> to begin · <b class="accent">M</b> for contents</p>
+            <p class="rise d4" style="margin-top:56px;font-size:30px;color:var(--muted)">Developed by <b style="color:var(--text);font-weight:650">Faisal Albusaidi</b></p>
+            <p class="small faint rise d4" style="margin-top:14px">Interactive revision · press <b class="accent">→</b> to begin · <b class="accent">M</b> for contents</p>
           </div>`,
         enter(c) { neural(c, c.$('canvas.neural')); },
       },

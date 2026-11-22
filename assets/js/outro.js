@@ -14,6 +14,7 @@
             <a class="btn primary" href="exam.html" style="text-decoration:none;font-size:32px;padding:22px 44px">Start the mock exam</a>
             <button class="btn" onclick="Deck.go(0)" style="font-size:32px;padding:22px 44px">Back to start</button>
           </div>
+          <p class="rise d4" style="margin-top:64px;font-size:28px;color:var(--muted)">Developed by <b style="color:var(--text);font-weight:650">Faisal Albusaidi</b></p>
         </div>`,
       enter(c) { Deck.neural(c, c.$('canvas.neural')); },
     }]

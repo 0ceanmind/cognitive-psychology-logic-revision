@@ -129,3 +129,26 @@ kbd { font-family: inherit; font-size: .9em; padding: .1em .45em; border-radius:
 .fade-in { animation: fin .6s var(--ease) both; }
 @keyframes fin { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+.x-foot { position: relative; z-index: 1; text-align: center; color: var(--faint); font-size: .62em; padding: 0 4vw 4vh; }
+.x-foot b { color: var(--muted); font-weight: 650; }
+
+/* answer preview */
+.x-btn.sm { font-size: .68em; padding: .55em 1.1em; }
+.x-peek { border-color: color-mix(in srgb, var(--yellow) 60%, transparent); }
+.x-peek::before { content: ""; width: .55em; height: .55em; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+.x-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 3vh 3vw;
+  background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  opacity: 0; transition: opacity .35s var(--ease); }
+.x-modal.open { opacity: 1; }
+.x-mcard { width: min(1180px, 94vw); background: var(--surface); border: 1px solid var(--line-2); border-radius: 26px; overflow: hidden;
+  box-shadow: 0 40px 120px -30px rgba(0,0,0,.7); transform: translateY(18px) scale(.98); transition: transform .45s var(--ease); }
+.x-modal.open .x-mcard { transform: none; }
+.x-mhead { display: flex; justify-content: space-between; align-items: center; gap: 1em; padding: .9em 1.1em; }
+.x-mtitle { font-size: .95em; font-weight: 680; letter-spacing: -.01em; margin-top: .25em; }
+.x-frame { position: relative; aspect-ratio: 16 / 9; max-height: 70vh; background: #000; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.x-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.x-load { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .8em; transition: opacity .6s; pointer-events: none; z-index: 1; }
+.x-mfoot { display: flex; justify-content: space-between; align-items: center; gap: 1em; padding: .9em 1.1em; flex-wrap: wrap; }
+.x-ans { display: flex; align-items: center; gap: .6em; font-size: .8em; font-weight: 600; flex: 1; min-width: 14em; line-height: 1.35; }
+.x-ans span { flex: none; background: var(--yellow); color: #000; font-weight: 800; font-size: .8em; padding: .3em .8em; border-radius: 999px; }

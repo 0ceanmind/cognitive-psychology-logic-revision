@@ -157,6 +157,8 @@
     index = Math.max(0, Math.min(slides.length - 1, index));
     if (index === cur) { setStep(toStep == null ? step : toStep); return; }
     const prev = slides[cur];
+    document.querySelectorAll('.answer-hl').forEach(n => n.classList.remove('answer-hl'));
+    document.querySelectorAll('.answer-tag').forEach(n => n.remove());
     if (prev) {
       if (ctx) ctx.dispose();
       if (prev.def.leave) try { prev.def.leave(prev.ctxRef); } catch (e) { console.error(e); }
@@ -226,7 +228,7 @@
       slides.filter(s => s.chapter === ch).forEach(s => { html += '<li><button data-i="' + s.index + '">' + (s.def.title || '—') + '</button></li>'; });
       html += '</ol></div>';
     });
-    html += '</div><div class="keys"><span><kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd> next</span><span><kbd>←</kbd> <kbd>PgUp</kbd> back</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> contents</span><span><kbd>L</kbd> light / dark</span><span><kbd>B</kbd> blackout</span><span><kbd>E</kbd> mock exam</span><span><kbd>Home</kbd>/<kbd>End</kbd> first / last</span></div>';
+    html += '</div><div class="keys"><span><kbd>→</kbd> <kbd>Space</kbd> <kbd>PgDn</kbd> next</span><span><kbd>←</kbd> <kbd>PgUp</kbd> back</span><span><kbd>F</kbd> fullscreen</span><span><kbd>M</kbd> contents</span><span><kbd>L</kbd> light / dark</span><span><kbd>B</kbd> blackout</span><span><kbd>E</kbd> mock exam</span><span><kbd>Home</kbd>/<kbd>End</kbd> first / last</span><span style="margin-left:auto">Developed by <b style="color:var(--text)">Faisal Albusaidi</b></span></div>';
     m.innerHTML = html;
     m.addEventListener('click', e => {
       const b = e.target.closest('button[data-i]');
@@ -316,9 +318,87 @@
       s.textContent = '*,*::before,*::after{transition-duration:0s!important;transition-delay:0s!important;animation-duration:0s!important;animation-delay:0s!important}#hud,#progress{display:none!important}';
       document.head.appendChild(s);
     }
+    const P = new URLSearchParams(location.search);
+    if (P.get('embed')) document.body.classList.add('embed');
     const wait = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-    wait.then(() => { go(isNaN(start) ? 0 : start - 1, shot ? 'end' : 0); wake(); });
+    wait.then(() => {
+      if (P.get('a') || P.get('q')) { showAnswer({ ch: +P.get('fc') || 0, a: P.get('a') || '', q: P.get('q') || '', src: P.get('src') || '' }); wake(); return; }
+      go(isNaN(start) ? 0 : start - 1, shot ? 'end' : 0); wake();
+    });
   }
 
-  window.Deck = { chapter, icon, qc, go, next, prev, boot, slides, chapters, scale: 1 };
+  /* ---------------- Answer finder (used by the mock exam) ---------------- */
+  const STOP = new Set('the and for with that this from into which what when where who whom whose than then them they their there these those have has had are was were been being not but can may also its it is of to in on at by as an a or be does do did how why your you our about only more most such each other some any one two three four five six seven eight nine ten after before over under between same very just like'.split(' '));
+  const normT = s => String(s || '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9±]+/g, ' ').trim();
+  const toks = s => normT(s).split(' ').filter(w => w.length > 2 && !STOP.has(w)).map(w => w.replace(/(ing|ed|es|s)$/, ''));
+  const nodeText = n => { const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT); const out = []; let t; while ((t = w.nextNode())) out.push(t.nodeValue); return out.join(' '); };
+  const cover = (need, have) => { if (!need.length) return 0; const h = new Set(have); return need.filter(t => h.has(t)).length / need.length; };
+  function srcTitles(src) {
+    let s = String(src || '').replace(/^\s*Ch\s*\d+\s*(slides?|·)?\s*/i, '').replace(/\((True\/False|review)[^)]*\)/ig, '');
+    return s.split(/'\s*(?:and|,)\s*'/).map(x => x.replace(/^['\s]+|['\s]+$/g, '')).filter(Boolean);
+  }
+  function locate(o) {
+    const pool = slides.filter(s => (!o.ch || s.chapter.id === 'ch' + o.ch) && !/quick check|true or false|opener|^title$|roadmap|learning outcomes|the big idea|mock exam/i.test(s.def.title || ''));
+    const a = toks(o.a), q = toks(o.q), titles = srcTitles(o.src).map(toks);
+    let best = null, bs = -1;
+    pool.forEach(s => {
+      const cap = toks((s.def.src || '').replace(/^Ch\d\s*·\s*/, '') + ' ' + (s.def.title || '') + ' ' + ((s.el.querySelector('h2') || {}).textContent || ''));
+      const capRaw = normT((s.def.src || '').replace(/^Ch\d\s*·\s*/, '')) + ' | ' + normT(s.def.title) + ' | ' + normT((s.el.querySelector('h2') || {}).textContent);
+      const exact = srcTitles(o.src).some(t => { const n = normT(t); return n && capRaw.split(' | ').some(c => c === n || c.startsWith(n + ' ')); }) ? 5 : 0;
+      const tSim = (titles.length ? Math.max(...titles.map(t => cover(t, cap))) : 0) + exact / 10;
+      const body = toks(nodeText(s.el));
+      const score = tSim * 10 + cover(a, body) * 6 + cover(q, body) * 2;
+      if (score > bs) { bs = score; best = s; }
+    });
+    return best;
+  }
+  function bestElement(el, a, min) {
+    min = min || 0.4;
+    let best = null, bs = 0;
+    el.querySelectorAll('*').forEach(n => {
+      if (n.closest('svg') || n.closest('button') || /^(SCRIPT|STYLE|CANVAS|IMG|svg|BUTTON)$/i.test(n.tagName) || n.closest('.src') || n.closest('.answer-tag')) return;
+      const t = nodeText(n); if (!t || t.length > 700) return;
+      const c = cover(a, toks(t)); if (c < min) return;
+      const sc = c - t.length / 3000;
+      if (sc > bs + 1e-9) { bs = sc; best = n; }
+    });
+    if (!best && min > 0.25) return bestElement(el, a, 0.25);
+    if (best && best.tagName === 'TD') best = best.parentElement;
+    // a short label inside a card: highlight the whole card
+    if (best && best.textContent.trim().length < 60) { const card = best.closest('.card, [class*="card"], tr, li'); if (card && card !== el && card.textContent.length < 700) best = card; }
+    return { el: best, cov: bs };
+  }
+  async function showAnswer(o) {
+    const s = locate(o);
+    if (!s) { go(0); return; }
+    go(s.index, 'end');
+    document.querySelectorAll('.answer-hl').forEach(n => n.classList.remove('answer-hl'));
+    const a = toks(o.a);
+    const pause = ms => new Promise(r => setTimeout(r, ms));
+    await pause(450);
+    let r = bestElement(s.el, a);
+    // interactive slides: try their toggles (chips, tabs) until the answer is on screen
+    if (r.cov < 0.7) {
+      const btns = Array.from(s.el.querySelectorAll('button, .seg button, [data-i], [data-k], [data-g], [data-v]'))
+        .filter(b => b.textContent.length < 60 && !/start|flash|reveal|hide|restart|pick a topic|give a cue|check the premises|timer|tap/i.test(b.textContent));
+      const fire = b => b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      let bestBtn = null, bestCov = r.cov;
+      for (const b of btns.slice(0, 14)) {
+        fire(b); await pause(380);
+        const rr = bestElement(s.el, a);
+        if (rr.cov > bestCov + 0.05) { bestCov = rr.cov; bestBtn = b; }
+      }
+      if (bestBtn) { fire(bestBtn); await pause(420); }
+      r = bestElement(s.el, a);
+    }
+    if (r.el) r.el.classList.add('answer-hl');
+    const tag = document.createElement('div');
+    tag.className = 'answer-tag';
+    tag.innerHTML = '<span>Answer</span>' + (r.el ? 'highlighted on this slide' : 'is on this slide');
+    s.el.appendChild(tag);
+    Deck.found = { index: s.index, title: s.def.title, cov: r.cov, el: r.el && r.el.textContent.trim().slice(0, 140) };
+    try { parent !== window && parent.postMessage({ type: 'cpl-found', index: s.index + 1, title: s.def.title, chapter: s.chapter.label }, '*'); } catch (e) { }
+  }
+
+  window.Deck = { chapter, icon, qc, go, next, prev, boot, slides, chapters, scale: 1, locate, showAnswer };
 })();
